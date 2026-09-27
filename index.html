@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>AKI 與 CRRT 導航</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF1F0; --surface:#FFFFFF; --surface-2:#F5F8F7; --ink:#14212A; --muted:#55666D; --line:#D2DBDA;
+  --accent:#0B6E69; --accent-ink:#FFFFFF; --accent-soft:#DCEEEC;
+  --ok:#2A7549; --ok-soft:#E0F0E6; --warn:#9A5700; --warn-soft:#FAEBD3; --crit:#B42318; --crit-soft:#FBE2DE;
+  --strip:#12202A; --strip-ink:#E6EEF0; --strip-muted:#93A7AF; --strip-line:#2B3D47; --strip-accent:#43C4B8;
+  --s0:#5B7C8D; --s1:#C07A00; --s2:#C2410C; --s3:#9B1C12;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-label:"IBM Plex Sans Condensed","Noto Sans TC","Arial Narrow",sans-serif;
+  --f-num:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0B1114; --surface:#131C20; --surface-2:#182328; --ink:#E2EAEC; --muted:#93A4AA; --line:#26353B;
+    --accent:#3CBDB2; --accent-ink:#06201E; --accent-soft:#12332F;
+    --ok:#5CC48E; --ok-soft:#12301F; --warn:#F0AA45; --warn-soft:#352409; --crit:#F2685F; --crit-soft:#3A1512;
+    --strip:#070D10; --strip-ink:#E2EAEC; --strip-muted:#8397A0; --strip-line:#223139; --strip-accent:#43C4B8;
+    --s0:#8FB1C2; --s1:#F0AA45; --s2:#F97316; --s3:#F2685F;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0B1114; --surface:#131C20; --surface-2:#182328; --ink:#E2EAEC; --muted:#93A4AA; --line:#26353B;
+  --accent:#3CBDB2; --accent-ink:#06201E; --accent-soft:#12332F;
+  --ok:#5CC48E; --ok-soft:#12301F; --warn:#F0AA45; --warn-soft:#352409; --crit:#F2685F; --crit-soft:#3A1512;
+  --strip:#070D10; --strip-ink:#E2EAEC; --strip-muted:#8397A0; --strip-line:#223139; --strip-accent:#43C4B8;
+  --s0:#8FB1C2; --s1:#F0AA45; --s2:#F97316; --s3:#F2685F;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.3}
+p{margin:0}
+a{color:var(--accent)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:16px}
+.label{font-family:var(--f-label);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.strip{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--strip);color:var(--strip-ink);border-bottom:1px solid var(--strip-line)}
+.top{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;justify-content:space-between;padding-block:10px 8px}
+.brand h1{font-family:var(--f-label);font-size:20px;font-weight:700}
+.brand p{font-size:12px;color:var(--strip-muted)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--strip-line);border-radius:999px;padding:2px 10px;font-size:13px}
+.chip b{font-family:var(--f-num)}
+.chip.crit{border-color:#F2685F;color:#FFB4AE}.chip.warn{border-color:#F0AA45;color:#FFD9A0}.chip.ok{border-color:#5CC48E;color:#B6EBCD}
+.beds-scroll{overflow-x:auto;padding-bottom:10px;color-scheme:dark}
+.beds{display:flex;gap:6px;width:max-content;min-width:100%}
+.bedbtn{display:grid;justify-items:center;gap:2px;min-width:56px;padding:4px 6px 5px;border-radius:8px;border:1px solid var(--strip-line);background:transparent;color:var(--strip-ink);cursor:pointer;font-family:var(--f-num);font-weight:700;font-size:15px}
+.bedbtn small{font-family:var(--f-body);font-weight:600;font-size:10.5px;color:var(--strip-muted)}
+.bedbtn[aria-current="true"]{background:var(--strip-ink);color:var(--strip);border-color:var(--strip-ink)}
+.bedbtn[aria-current="true"] small{color:var(--strip)}
+.nav{display:flex;gap:4px;overflow-x:auto;padding-bottom:8px}
+.nav a{color:var(--strip-ink);text-decoration:none;font-size:13.5px;padding:4px 10px;border:1px solid var(--strip-line);border-radius:999px;white-space:nowrap}
+main{padding-block:18px 48px;display:grid;gap:18px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start}
+@media (max-width:1000px){.layout{grid-template-columns:1fr}}
+.col{display:grid;gap:16px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:12px;min-width:0;scroll-margin-top:160px}
+.sec{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sec h2{font-size:18px;font-weight:700;display:flex;gap:10px;align-items:center}
+.sec h2 .n{font-family:var(--f-num);font-size:13px;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;background:var(--ink);color:var(--surface)}
+.sec span{font-size:12px;color:var(--muted)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 12px;cursor:pointer;font-weight:500;font-size:14px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.small{padding:4px 10px;font-size:13px}
+.btn.danger{border-color:var(--crit);color:var(--crit)}
+.toast{font-size:13px;color:var(--ok)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.muted{color:var(--muted);font-size:13px}
+.sub{font-family:var(--f-label);font-size:12.5px;font-weight:600;letter-spacing:.05em;color:var(--muted);text-transform:uppercase}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.fld{display:grid;gap:3px;min-width:0}
+.fld label{font-size:12.5px;color:var(--muted)}
+.fld input,.fld select{width:100%;border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:6px 9px;font-family:var(--f-num)}
+.fld select{font-family:var(--f-body)}
+.fld.hit input,.fld.hit select{border-color:var(--crit);background:var(--crit-soft)}
+.unit{font-size:10.5px;color:var(--muted);font-family:var(--f-num)}
+.kvs{display:flex;gap:8px 18px;flex-wrap:wrap;font-size:14px;border-top:1px dashed var(--line);padding-top:10px}
+.kvs b{font-family:var(--f-num)}
+.kvs .bad b{color:var(--crit)}
+.cks{display:grid;gap:0;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.ck{display:flex;gap:9px;align-items:flex-start;padding:7px 8px;border-radius:8px;cursor:pointer;font-size:14.5px}
+.ck:hover{background:var(--surface-2)}
+.ck input{margin-top:4px;width:17px;height:17px;accent-color:var(--accent);flex:none}
+.ck small{display:block;color:var(--muted);font-size:12.5px}
+.ck:has(input:checked){background:var(--ok-soft)}
+.ck.risk input{accent-color:var(--crit)}
+.ck.risk:has(input:checked){background:var(--crit-soft)}
+.stage{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;border-radius:14px;padding:16px 18px;color:#fff;align-items:center}
+.stage.s0{background:var(--s0)}.stage.s1{background:var(--s1)}.stage.s2{background:var(--s2)}.stage.s3{background:var(--s3)}
+.stage .big{font-family:var(--f-label);font-weight:700;font-size:48px;line-height:1}
+.stage h3{font-size:19px;font-weight:700}
+.stage p{font-size:14px;opacity:.95}
+.cub{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.cub span{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.45);border-radius:6px;padding:1px 9px;font-family:var(--f-num);font-weight:700;font-size:14px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-family:var(--f-label);font-size:12px;color:var(--muted);font-weight:600;background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.on{background:var(--crit-soft);font-weight:600}
+.note{font-size:13.5px;border-radius:8px;padding:9px 12px;background:var(--surface-2);border:1px solid var(--line)}
+.note.accent{background:var(--accent-soft);border-color:transparent}
+.note.warn{background:var(--warn-soft);border-color:transparent}
+.note.crit{background:var(--crit-soft);border-color:transparent}
+.note.ok{background:var(--ok-soft);border-color:transparent}
+.note ul{margin:4px 0 0;padding-left:18px;display:grid;gap:3px}
+.tag{display:inline-block;font-family:var(--f-label);font-size:11px;font-weight:600;letter-spacing:.04em;border:1px solid var(--accent);color:var(--accent);border-radius:4px;padding:0 5px;margin-left:4px;vertical-align:1px}
+.out{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.oc{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface-2);display:grid;gap:2px}
+.oc b{font-family:var(--f-num);font-size:20px}
+.oc small{color:var(--muted);font-size:12.5px}
+.oc.bad{background:var(--crit-soft);border-color:transparent}.oc.bad b{color:var(--crit)}
+.oc.good{background:var(--ok-soft);border-color:transparent}
+.side{display:grid;gap:16px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 150px)}
+@media (max-width:1000px){.side{position:static}}
+.side h2{font-size:16px;font-weight:700}
+.sum{display:grid;gap:5px;font-size:14px}
+textarea.buf{width:100%;height:130px;border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:8px;font-family:var(--f-num);font-size:12.5px}
+.confirm{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--crit);flex-wrap:wrap}
+footer{border-top:1px solid var(--line);padding-top:16px;display:grid;gap:10px;font-size:13px;color:var(--muted)}
+footer ol{margin:0;padding-left:20px;display:grid;gap:3px}
+.disclaimer{background:var(--warn-soft);color:var(--ink);border-radius:10px;padding:10px 14px;font-size:13.5px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="strip">
+  <div class="wrap top">
+    <div class="brand"><h1>AKI 與 CRRT 導航</h1><p>KDIGO 2012 · KDIGO 2026 草案（公開審閱版）</p></div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="wrap"><div class="beds-scroll"><div class="beds" id="beds"></div></div>
+  <nav class="nav"><a href="#s1">1 分期</a><a href="#s2">2 處置</a><a href="#s3">3 RRT 時機</a><a href="#s4">4 CRRT 劑量</a><a href="#s5">5 抗凝</a><a href="#s6">6 脫離與恢復</a></nav></div>
+</header>
+
+<div class="wrap">
+<main>
+  <div class="layout"><div class="col" id="main"></div><aside class="side" id="side"></aside></div>
+  <footer>
+    <div class="disclaimer"><b>僅供臨床流程輔助與教學，不取代臨床判斷。</b>KDIGO 2026 AKI／AKD 指引目前為公開審閱草案，正式版可能修改；CRRT 處方與 citrate 監測請依院內流程與腎臟科建議。資料只存在這台裝置的瀏覽器，不會上傳；請只記錄床號。</div>
+    <div>
+      <span class="label">依據</span>
+      <ol>
+        <li>KDIGO Acute Kidney Injury Work Group. KDIGO clinical practice guideline for acute kidney injury. <i>Kidney Int Suppl</i> 2012;2:1–138。</li>
+        <li>KDIGO 2026 Clinical Practice Guideline for Acute Kidney Injury (AKI) and Acute Kidney Disease (AKD). Public Review Draft, March 2026. <a href="https://kdigo.org/guidelines/acute-kidney-injury/">kdigo.org</a></li>
+        <li>Chawla LS, et al. Development and standardization of a furosemide stress test. <i>Crit Care</i> 2013;17:R207。</li>
+        <li>STARRT-AKI Investigators. Timing of initiation of renal-replacement therapy in acute kidney injury. <i>N Engl J Med</i> 2020;383:240–251；Gaudry S, et al. AKIKI. <i>N Engl J Med</i> 2016;375:122–133。</li>
+        <li>Zarbock A, et al. Effect of regional citrate vs systemic heparin anticoagulation during CRRT (RICH). <i>JAMA</i> 2020;324:1629–1639。</li>
+      </ol>
+    </div>
+  </footer>
+</main>
+</div>
+
+<script>
+(function(){
+const KEY='aki-v1';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const n=v=>{if(v===''||v==null)return NaN;const x=parseFloat(v);return isFinite(x)?x:NaN;};
+const f1=(x,d=1)=>isFinite(x)?(+x.toFixed(d)).toString():'—';
+const newBed=()=>({v:{sex:'M',bio:'',wbasis:'auto',mode:'cvvhdf'},c:{},note:''});
+const defS=()=>({beds:Array.from({length:12},(_,i)=>String(i+1)),bed:'1',data:{}});
+let S;
+try{S=Object.assign(defS(),JSON.parse(localStorage.getItem(KEY)||'{}'));}catch(e){S=defS();}
+if(!Array.isArray(S.beds)||!S.beds.length)S.beds=defS().beds;
+if(!S.beds.includes(S.bed))S.bed=S.beds[0];
+if(!S.data||typeof S.data!=='object')S.data={};
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+const B_=()=>S.data[S.bed]||(S.data[S.bed]=newBed());
+
+/* ---------- 計算 ---------- */
+function W(B){
+  const w=n(B.v.wt),h=n(B.v.ht),m=B.v.sex==='M';
+  const ibw=h>0?(m?50:45.5)+0.91*(h-152.4):NaN;
+  const bmi=w>0&&h>0?w/((h/100)**2):NaN;
+  const adj=isFinite(ibw)&&w>0?ibw+0.4*(w-ibw):NaN;
+  return {w,h,ibw,bmi,adj};
+}
+function stage(B){
+  const v=B.v,c=B.c,wt=W(B);
+  const scr=n(v.scr),base=n(v.base),s48=n(v.scr48),cys=n(v.cys),cysB=n(v.cysBase);
+  const ratio=base>0&&scr>0?scr/base:NaN, cr=cysB>0&&cys>0?cys/cysB:NaN;
+  const d48=isFinite(scr)&&isFinite(s48)?scr-s48:NaN;
+  let C=0,cWhy=[];
+  if(c.rrt||scr>=4&&(ratio>=1.5||d48>=0.3)||ratio>=3){C=3;cWhy.push(c.rrt?'已開始 RRT':ratio>=3?`SCr ${f1(ratio,2)} 倍基準`:'SCr ≥4.0 mg/dL');}
+  else if(ratio>=2){C=2;cWhy.push(`SCr ${f1(ratio,2)} 倍基準`);}
+  else if(ratio>=1.5||d48>=0.3){C=1;cWhy.push(ratio>=1.5?`SCr ${f1(ratio,2)} 倍基準`:`48 小時內上升 ${f1(d48,2)} mg/dL`);}
+  const cysAKI=cr>=1.5;
+  // 尿量：2026 草案以理想體重計算
+  const uw=isFinite(wt.ibw)?wt.ibw:wt.w;
+  const u6=n(v.u6),u12=n(v.u12),u24=n(v.u24),anu=n(v.anuria);
+  const r6=u6/(uw*6),r12=u12/(uw*12),r24=u24/(uw*24);
+  let U=0,uWhy=[];
+  if(r24<0.3||anu>=12){U=3;uWhy.push(anu>=12?`無尿 ${anu} 小時`:`24 小時平均 ${f1(r24,2)} mL/kg/h`);}
+  else if(r12<0.5){U=2;uWhy.push(`12 小時平均 ${f1(r12,2)} mL/kg/h`);}
+  else if(r6<0.5){U=1;uWhy.push(`6 小時平均 ${f1(r6,2)} mL/kg/h`);}
+  const bio=v.bio==='pos'?1:v.bio==='neg'?0:null;
+  const kd=Math.max(C,U);
+  const aki=kd>0||cysAKI||bio===1;
+  return {C,U,bio,kd,aki,cysAKI,ratio,cr,d48,cWhy,uWhy,r6,r12,r24,uw,wt};
+}
+
+/* ---------- 渲染 ---------- */
+function renderBeds(){
+  $('#beds').innerHTML=S.beds.map(b=>{const B=S.data[b];let lab='—';
+    if(B&&(n(B.v.scr)||n(B.v.u6)||B.c.rrt)){const s=stage(B);lab=s.kd?'Stage '+s.kd:s.aki?'AKI':'無';}
+    return `<button type="button" class="bedbtn" data-bed="${esc(b)}" aria-current="${b===S.bed}">${esc(b)}<small>${lab}</small></button>`;}).join('');
+}
+function render(){
+  const a=document.activeElement;let fk=null,sel=null;
+  if(a&&a.id){fk='#'+CSS.escape(a.id);try{sel=[a.selectionStart,a.selectionEnd];}catch(e){}}
+  const B=B_(),v=B.v,c=B.c,s=stage(B),wt=s.wt;
+  renderBeds();
+  const fld=(k,l,u,hit,ph)=>`<div class="fld ${hit?'hit':''}"><label for="v-${k}">${l}${u?` <span class="unit">${u}</span>`:''}</label><input id="v-${k}" data-v="${k}" inputmode="decimal" value="${esc(v[k]??'')}" placeholder="${ph||''}"></div>`;
+  const sel_=(k,l,opts)=>`<div class="fld"><label for="v-${k}">${l}</label><select id="v-${k}" data-sel="${k}">${opts.map(([x,t])=>`<option value="${x}" ${v[k]===x?'selected':''}>${t}</option>`).join('')}</select></div>`;
+  const ck=(k,l,sub,cls)=>`<label class="ck ${cls||''}" for="c-${k}"><input type="checkbox" id="c-${k}" data-c="${k}" ${c[k]?'checked':''}><span>${l}${sub?`<small>${sub}</small>`:''}</span></label>`;
+
+  /* 1 分期 */
+  const cub=`C${s.C}U${s.U}${s.bio===null?'':'B'+s.bio}`;
+  let h=`<section class="panel" id="s1"><div class="sec"><h2><span class="n">1</span>AKI 診斷與分期</h2><span>KDIGO 2012；2026 草案 C／U／B 三軸</span></div>
+    <div class="grid">${fld('wt','體重','kg')}${fld('ht','身高','cm')}${sel_('sex','性別',[['M','男'],['F','女']])}
+      ${fld('base','基準 SCr','mg/dL')}${fld('scr','目前 SCr','mg/dL',s.C>0)}${fld('scr48','48 小時前 SCr','mg/dL')}
+      ${fld('cysBase','基準 cystatin C','mg/L')}${fld('cys','目前 cystatin C','mg/L',s.cysAKI)}</div>
+    <span class="sub">尿量（最近的累計量）</span>
+    <div class="grid">${fld('u6','最近 6 小時','mL',s.U>=1)}${fld('u12','最近 12 小時','mL',s.U>=2)}${fld('u24','最近 24 小時','mL',s.U>=3)}${fld('anuria','無尿時數','小時')}
+      ${sel_('bio','腎損傷生物標記',[['','未測'],['pos','陽性'],['neg','陰性']])}${fld('dur','異常已持續','小時')}</div>
+    <div class="cks">${ck('rrt','已開始腎臟替代治療','','risk')}</div>
+    <div class="kvs"><span>理想體重 <b>${f1(wt.ibw)}</b> kg</span><span>BMI <b>${f1(wt.bmi)}</b></span><span class="${s.ratio>=1.5?'bad':''}">SCr／基準 <b>${f1(s.ratio,2)}</b></span><span>尿量 6／12／24 h <b>${f1(s.r6,2)}／${f1(s.r12,2)}／${f1(s.r24,2)}</b> mL/kg/h</span></div>
+    <div class="stage s${s.kd}"><div class="big">${s.kd?'Stage '+s.kd:s.aki?'AKI':'—'}</div><div><h3>${s.kd?`KDIGO AKI Stage ${s.kd}`:s.aki?'符合 AKI（cystatin C 或生物標記）':'目前未達 AKI 標準'}</h3>
+      <p>${[...s.cWhy,...s.uWhy].join('、')||'輸入 SCr 與尿量以判定'}${s.cysAKI?`；cystatin C ${f1(s.cr,2)} 倍基準（2026 草案新增）`:''}</p>
+      <div class="cub"><span>${cub}</span>${n(v.dur)>0&&s.aki?`<span>${n(v.dur)>48?'持續性 AKI（>48 小時）':'暫時性 AKI（≤48 小時）'}</span>`:''}</div></div></div>
+    <div class="tbl"><table><thead><tr><th>分期</th><th>血清肌酸酐（C）</th><th>尿量（U）</th></tr></thead><tbody>
+      <tr><td>1</td><td class="${s.C===1?'on':''}">1.5–1.9 倍基準，或 48 小時內上升 ≥0.3 mg/dL</td><td class="${s.U===1?'on':''}">&lt;0.5 mL/kg/h 持續 6–12 小時</td></tr>
+      <tr><td>2</td><td class="${s.C===2?'on':''}">2.0–2.9 倍基準</td><td class="${s.U===2?'on':''}">&lt;0.5 mL/kg/h 持續 ≥12 小時</td></tr>
+      <tr><td>3</td><td class="${s.C===3?'on':''}">≥3.0 倍基準，或 SCr ≥4.0 mg/dL，或開始 RRT</td><td class="${s.U===3?'on':''}">&lt;0.3 mL/kg/h 持續 ≥24 小時，或無尿 ≥12 小時</td></tr></tbody></table></div>
+    <div class="note"><b>2026 草案的變動</b><ul><li>AKI 定義新增：cystatin C 7 天內上升 ≥1.5 倍（SCr 不準確時建議使用，2B），以及腎損傷生物標記升高（結構性標準）。</li><li>尿量以<b>理想體重</b>計算；分期可用 C（肌酸酐）、U（尿量）、B（損傷生物標記）三軸分別描述，例如 ${cub}。</li><li>暫時性 AKI ≤48 小時、持續性 AKI >48 小時至 7 天；超過 7 天、3 個月內為 AKD。</li></ul></div></section>`;
+
+  /* 2 處置 */
+  const fw=n(v.wt);
+  h+=`<section class="panel" id="s2"><div class="sec"><h2><span class="n">2</span>AKI 處置與腎臟保護</h2><span>KDIGO 2012；2026 草案</span></div>
+    <div class="cks">${ck('m_neph','停用或調整腎毒性藥物，藥師參與藥物管理','2026 草案：多面向藥物與腎毒素管理（1C）')}${ck('m_dose','依腎功能變化調整藥物劑量','')}
+      ${ck('m_vol','評估容積狀態與血行動力學','')}${ck('m_fluid','需擴充容積時用平衡晶體液，不用膠體','2026 草案：1B（腦外傷除外）')}
+      ${ck('m_map','MAP >65 mmHg；慢性高血壓者可能需要更高','2026 草案：2C')}${ck('m_dopa','不使用低劑量 dopamine 保護腎臟','1A')}
+      ${ck('m_glu','血糖 140–180 mg/dL','')}${ck('m_cause','找原因：尿液鏡檢、腎臟超音波、必要時腎臟切片','2026 草案：成人建議尿液鏡檢（2C）')}
+      ${ck('m_contrast','顯影劑：評估風險後再決定，不必因 AKI 一律延後','')}${ck('m_nut','營養：不為延後透析而限制蛋白質；優先腸道營養','')}</div>
+    <div class="note accent"><b>利尿劑</b>：有明顯容積過多時使用（2B），初始以間歇推注優於持續輸注；沒有其他透析適應症時，先用利尿劑再考慮體外脫水（1C）。不用來預防或治療 AKI 本身。</div>
+    <div class="note accent"><b>嚴重代謝性酸中毒（pH &lt;7.20）</b>：沒有其他緊急透析適應症時，建議靜脈碳酸氫鈉優先於 RRT（2026 草案，2C）。</div>
+    <span class="sub">Furosemide 壓力測試（2026 草案：Stage 1–2、容積正常或過多者，2C）</span>
+    <div class="row">${sel_('fstPrior','近期用過 loop 利尿劑',[['no','否（1.0 mg/kg）'],['yes','是（1.5 mg/kg）']])}${fld('fstUo','給藥後 2 小時尿量','mL')}</div>
+    ${(()=>{const exposed=v.fstPrior==='yes';const dose=fw>0?(exposed?1.5:1)*fw:NaN;const uo=n(v.fstUo);
+      return `<div class="out"><div class="oc"><small>Furosemide 劑量（${exposed?'1.5':'1.0'} mg/kg IV）</small><b>${isFinite(dose)?Math.round(dose)+' mg':'輸入體重'}</b><small>補足尿液流失量，避免低血容</small></div>
+      <div class="oc ${isFinite(uo)?(uo<200?'bad':'good'):''}"><small>2 小時尿量</small><b>${isFinite(uo)?uo+' mL':'—'}</b><small>${isFinite(uo)?(uo<200?'&lt;200 mL：進展至 Stage 3 或需 RRT 的風險高':'≥200 mL：進展風險較低'):'&lt;200 mL 預測進展'}</small></div></div>`;})()}
+  </section>`;
+
+  /* 3 RRT 時機 */
+  const ind=[['k','藥物無法控制的高血鉀'],['acid','藥物無法控制的嚴重代謝性酸中毒'],['fo','利尿劑無效的容積過多或肺水腫'],['urem','尿毒併發症（心包膜炎、腦病變、出血）'],['tox','可透析清除的中毒'],['nh3','肝衰竭合併 ≥2 級肝腦病變與高血氨','2026 草案：可考慮 CRRT']];
+  const anyInd=ind.some(([k])=>c['i_'+k]);
+  h+=`<section class="panel" id="s3"><div class="sec"><h2><span class="n">3</span>腎臟替代治療：時機與模式</h2><span>KDIGO 2026 草案</span></div>
+    <span class="sub">藥物治療無效的適應症</span><div class="cks">${ind.map(([k,l,s])=>ck('i_'+k,l,s,'risk')).join('')}</div>
+    <div class="note ${anyInd?'crit':'ok'}"><b>${anyInd?'有藥物治療無效的併發症：若符合病人意願與治療目標，開始 RRT。':'沒有緊急適應症：採延後策略，不預防性提早開始。'}</b><ul><li>成人 AKI 建議採延後開始 RRT 的策略，而非提早預防性開始（2026 草案，1C；AKIKI、STARRT-AKI）。</li><li>很可能需要 RRT 時，提前規劃（包括轉至有腎臟科與 RRT 的醫院）。</li><li>與病人及家屬共同決策。</li></ul></div>
+    <div class="note"><b>模式</b><ul><li>血行動力學不穩定：建議 CRRT 或急性腹膜透析，優於傳統間歇性透析（2C）；延長型間歇透析（PIRRT／SLED）也可接受。</li><li>急性腦損傷、顱內壓升高或腦水腫：CRRT 優於傳統間歇性透析。</li><li>生理與代謝可耐受、且無顱內壓疑慮時，可由 CRRT 轉為間歇性透析。</li></ul></div></section>`;
+
+  /* 4 CRRT 劑量 */
+  const basisW=v.wbasis==='actual'?wt.w:v.wbasis==='ibw'?wt.ibw:v.wbasis==='adj'?wt.adj:(wt.bmi>=30&&isFinite(wt.adj)?wt.adj:wt.w);
+  const qb=n(v.qb),hct=n(v.hct),pre=n(v.qpre)||0,post=n(v.qpost)||0,qd=n(v.qd)||0,uf=n(v.quf)||0,down=n(v.down);
+  const eff=pre+post+qd+uf;
+  const dose=basisW>0?eff/basisW:NaN;
+  const qp=qb>0&&hct>0?qb*60*(1-hct/100):NaN; // mL/h
+  const dil=isFinite(qp)&&pre>0?qp/(qp+pre):1;
+  const doseC=dose*dil;
+  const delivered=isFinite(down)?doseC*(24-down)/24:doseC;
+  const ff=isFinite(qp)?(post+uf+pre)/((isFinite(qp)?qp:0)+pre):NaN;
+  const tgtLo=basisW*20,tgtHi=basisW*25;
+  h+=`<section class="panel" id="s4"><div class="sec"><h2><span class="n">4</span>CRRT 劑量計算</h2><span>目標：實際給予的流出液 20–25 mL/kg/h（1B）</span></div>
+    <div class="grid">${sel_('wbasis','計算體重',[['auto','自動（BMI ≥30 用調整體重）'],['actual','實際體重'],['adj','調整體重'],['ibw','理想體重']])}
+      ${fld('qb','血流 Qb','mL/min')}${fld('hct','Hct','%')}${fld('qpre','前稀釋置換液','mL/h')}${fld('qpost','後稀釋置換液','mL/h')}${fld('qd','透析液','mL/h')}${fld('quf','淨脫水','mL/h')}${fld('down','預估每日停機','小時')}</div>
+    <div class="out">
+      <div class="oc"><small>計算體重</small><b>${f1(basisW)} kg</b><small>目標流出液 ${isFinite(tgtLo)?Math.round(tgtLo)+'–'+Math.round(tgtHi):'—'} mL/h</small></div>
+      <div class="oc"><small>總流出液</small><b>${eff?Math.round(eff)+' mL/h':'—'}</b><small>${isFinite(dose)?f1(dose)+' mL/kg/h（未校正）':''}</small></div>
+      <div class="oc ${isFinite(doseC)?(doseC<20?'bad':doseC>30?'bad':'good'):''}"><small>前稀釋校正後劑量</small><b>${isFinite(doseC)?f1(doseC)+' mL/kg/h':'—'}</b><small>${pre>0?'× Qp／(Qp＋前稀釋)':'無前稀釋'}</small></div>
+      <div class="oc ${isFinite(delivered)?(delivered<20?'bad':'good'):''}"><small>扣除停機後實際給予</small><b>${isFinite(delivered)?f1(delivered)+' mL/kg/h':'—'}</b><small>${isFinite(down)?`每日停機 ${down} 小時`:'輸入停機時數'}</small></div>
+      <div class="oc ${isFinite(ff)?(ff>0.25?'bad':'good'):''}"><small>過濾分率 FF</small><b>${isFinite(ff)?Math.round(ff*100)+'%':'—'}</b><small>建議 &lt;20–25%，過高易凝血</small></div></div>
+    <div class="note"><ul><li>KDIGO 2012：為達到實際給予 20–25 mL/kg/h，處方常需較高（因停機與前稀釋）。</li><li>2026 草案：BMI ≥30 時可用理想或調整體重計算，避免劑量過高；敗血症不使用高容量血液過濾（1B）。</li><li>休克、肝衰竭或乳酸血症：用碳酸氫鹽而非乳酸鹽緩衝液。每天檢視電解質、酸鹼與氮質是否達標並調整處方。</li></ul></div></section>`;
+
+  /* 5 抗凝 */
+  const tca=n(v.tca),ica=n(v.ica),pica=n(v.pica);
+  const tcaMmol=tca>0?tca*0.2495:NaN;
+  const ratio=tcaMmol>0&&ica>0?tcaMmol/ica:NaN;
+  const citCI=c.a_liver||c.a_shock;
+  h+=`<section class="panel" id="s5"><div class="sec"><h2><span class="n">5</span>CRRT 抗凝</h2><span>2026 草案：無禁忌時建議局部 citrate 抗凝優於 heparin（1B）</span></div>
+    <div class="cks">${ck('a_liver','嚴重肝病或肝衰竭','citrate 代謝不良','risk')}${ck('a_shock','休克合併組織灌流不足、乳酸持續上升','citrate 代謝不良','risk')}${ck('a_hit','急性肝素引起的血小板低下（HIT）','','risk')}${ck('a_bleed','高出血風險','','risk')}</div>
+    <div class="note ${citCI?'warn':'ok'}"><b>${citCI?'citrate 可能禁忌：考慮其他抗凝方式':'可使用局部 citrate 抗凝（RCA）'}</b><ul>
+      ${citCI?'<li>替代：unfractionated heparin、epoprostenol 或 nafamostat mesylate。</li>':''}
+      ${c.a_hit?'<li>急性 HIT 需全身抗凝時：argatroban、danaparoid 或 bivalirudin。</li>':''}
+      ${c.a_bleed?'<li>高出血風險：citrate 或不抗凝，避免全身 heparin。</li>':''}
+      <li>高凝狀態者可在全身抗凝之外加上 citrate。</li></ul></div>
+    <span class="sub">Citrate 監測（常用數值，依院內流程）</span>
+    <div class="grid">${fld('pica','濾器後 iCa','mmol/L',pica>0&&(pica<0.25||pica>0.35))}${fld('ica','全身 iCa','mmol/L',ica>0&&(ica<1.0||ica>1.2))}${fld('tca','總鈣','mg/dL')}</div>
+    <div class="out"><div class="oc ${pica>0?(pica<0.25||pica>0.35?'bad':'good'):''}"><small>濾器後 iCa 目標 0.25–0.35</small><b>${pica>0?pica:'—'}</b><small>${pica>0.35?'偏高：增加 citrate':pica>0&&pica<0.25?'偏低：減少 citrate':''}</small></div>
+      <div class="oc ${ica>0?(ica<1.0||ica>1.2?'bad':'good'):''}"><small>全身 iCa 目標約 1.0–1.2</small><b>${ica>0?ica:'—'}</b><small>${ica>0&&ica<1.0?'偏低：增加鈣補充':ica>1.2?'偏高：減少鈣補充':''}</small></div>
+      <div class="oc ${isFinite(ratio)?(ratio>2.5?'bad':'good'):''}"><small>總鈣／iCa 比值</small><b>${f1(ratio,2)}</b><small>${ratio>2.5?'>2.5：疑似 citrate 累積':'>2.5 提示 citrate 累積'}（總鈣換算 ×0.25 mmol/L）</small></div></div></section>`;
+
+  /* 6 脫離與恢復 */
+  const u24x=n(v.dUo24),ucr=n(v.ucr),uvol=n(v.uvol2),scr2=n(v.scr2h);
+  const crcl=ucr>0&&uvol>0&&scr2>0?(ucr*uvol)/(scr2*120):NaN;
+  const resRatio=s.ratio;
+  h+=`<section class="panel" id="s6"><div class="sec"><h2><span class="n">6</span>RRT 脫離與 AKI 恢復</h2><span>2026 草案</span></div>
+    <div class="grid">${fld('dUo24','24 小時尿量','mL')}<div class="fld"><label for="c-diur">使用利尿劑</label><input type="checkbox" id="c-diur" data-c="diur" ${c.diur?'checked':''} style="width:20px;height:20px;accent-color:var(--accent)"></div>
+      ${fld('uvol2','2 小時尿量','mL')}${fld('ucr','尿液肌酸酐','mg/dL')}${fld('scr2h','血清肌酸酐','mg/dL')}</div>
+    <div class="out"><div class="oc ${isFinite(u24x)?(u24x>(c.diur?2300:450)?'good':'bad'):''}"><small>24 小時尿量（${c.diur?'有利尿劑 >2,300':'無利尿劑 >450'} mL）</small><b>${isFinite(u24x)?u24x+' mL':'—'}</b><small>${isFinite(u24x)?(u24x>(c.diur?2300:450)?'達到可預測成功脫離的尿量':'未達標'):''}</small></div>
+      <div class="oc ${isFinite(crcl)?(crcl>=23?'good':'bad'):''}"><small>2 小時肌酸酐清除率（≥23 mL/min）</small><b>${isFinite(crcl)?f1(crcl)+' mL/min':'—'}</b><small>(尿 Cr × 尿量) ÷ (血清 Cr × 120)</small></div>
+      <div class="oc ${isFinite(resRatio)?(resRatio<1.2?'good':resRatio<1.5?'':'bad'):''}"><small>恢復程度（目前 SCr／基準）</small><b>${f1(resRatio,2)}</b><small>${!isFinite(resRatio)?'':resRatio<1.2?'完全恢復（<1.2 倍）':resRatio<1.5?'部分恢復（1.2–1.5 倍）':'尚未恢復'}</small></div></div>
+    <div class="note"><ul><li>AKI 恢復到足以應付代謝與水分平衡需求，或 RRT 已不符合病人意願時停止 RRT。</li><li>AKI 7 天內 SCr &lt;1.2 倍基準為完全恢復、1.2–1.5 倍為部分恢復；AKD 在 3 個月內評估。</li><li>出院前安排 AKI 後追蹤（腎功能、白蛋白尿、藥物調整）。</li></ul></div></section>
+  <section class="panel"><label class="label" for="note">備註</label><textarea id="note" data-note style="width:100%;min-height:60px;border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:8px">${esc(B.note)}</textarea></section>`;
+  $('#main').innerHTML=h;
+
+  $('#chips').innerHTML=`<span class="chip ${s.kd>=2?'crit':s.kd===1?'warn':s.aki?'warn':''}">${s.kd?'AKI Stage '+s.kd:s.aki?'AKI':'未達 AKI'}</span><span class="chip">${cub}</span>${anyInd?'<span class="chip crit">有 RRT 適應症</span>':''}${isFinite(delivered)?`<span class="chip ${delivered<20?'crit':'ok'}">CRRT <b>${f1(delivered)}</b> mL/kg/h</span>`:''}`;
+  $('#side').innerHTML=`<section class="panel"><h2>床 ${esc(S.bed)} 摘要</h2><div class="sum">
+      <div><b>${s.kd?'KDIGO Stage '+s.kd:s.aki?'AKI':'未達 AKI'}</b>（${cub}）</div>
+      <div>${[...s.cWhy,...s.uWhy].join('、')||'—'}</div>
+      <div>RRT 適應症：${anyInd?ind.filter(([k])=>c['i_'+k]).map(x=>x[1]).join('、'):'無'}</div>
+      ${eff?`<div>CRRT：流出液 ${Math.round(eff)} mL/h，實際約 ${f1(delivered)} mL/kg/h</div>`:''}</div>
+      <div class="row" style="align-items:center"><button type="button" class="btn small" data-act="copy">複製摘要</button><span class="toast" id="toast" aria-live="polite"></span></div>
+      <textarea class="buf" id="buf" hidden readonly aria-label="摘要"></textarea></section>
+    <section class="panel"><div class="row" style="align-items:center"><button type="button" class="btn small danger" data-act="clearAsk">清除此床</button><span class="confirm" id="clr" hidden>確定清除床 ${esc(S.bed)}？<button type="button" class="btn small danger" data-act="clearYes">清除</button><button type="button" class="btn small" data-act="clearNo">取消</button></span></div>
+      <details><summary style="cursor:pointer;font-weight:700">床號設定</summary><div class="fld" style="margin-top:8px"><label for="set-beds">床號（逗號或空白分隔）</label><input id="set-beds" value="${esc(S.beds.join(', '))}"></div><button type="button" class="btn small primary" style="margin-top:8px" data-act="saveBeds">儲存</button></details></section>`;
+  const el=fk&&$(fk);if(el){el.focus({preventScroll:true});if(sel&&sel[0]!=null)try{el.setSelectionRange(sel[0],sel[1]);}catch(e){}}
+}
+function summary(){
+  const B=B_(),s=stage(B),v=B.v;
+  const L=[`【床 ${S.bed}】AKI 評估：${s.kd?'KDIGO Stage '+s.kd:s.aki?'AKI':'未達 AKI'}（C${s.C}U${s.U}${s.bio===null?'':'B'+s.bio}）`];
+  const why=[...s.cWhy,...s.uWhy];if(why.length)L.push('依據：'+why.join('、'));
+  if(v.scr)L.push(`SCr ${v.scr}（基準 ${v.base||'—'}）`);
+  if(B.note)L.push('備註：'+B.note);
+  return L.join('\n');
+}
+document.addEventListener('click',e=>{
+  const bb=e.target.closest('[data-bed]');if(bb){S.bed=bb.dataset.bed;save();render();return;}
+  const a=e.target.closest('[data-act]');if(!a)return;
+  switch(a.dataset.act){
+    case 'copy':{const text=summary(),toast=$('#toast'),buf=$('#buf');
+      const ok=()=>{toast.textContent='已複製';setTimeout(()=>{const t=$('#toast');if(t)t.textContent='';},2000);};
+      const fail=()=>{buf.value=text;buf.hidden=false;buf.select();toast.textContent='無法自動複製，請手動複製下方文字';};
+      try{navigator.clipboard.writeText(text).then(ok,fail);}catch(err){fail();}return;}
+    case 'clearAsk':$('#clr').hidden=false;a.hidden=true;return;
+    case 'clearNo':$('#clr').hidden=true;$('[data-act="clearAsk"]').hidden=false;return;
+    case 'clearYes':S.data[S.bed]=newBed();break;
+    case 'saveBeds':{const b=$('#set-beds').value.split(/[,，\s]+/).map(v=>v.trim()).filter(Boolean);if(b.length){S.beds=[...new Set(b)];if(!S.beds.includes(S.bed))S.bed=S.beds[0];}break;}
+    default:return;
+  }
+  save();render();
+});
+document.addEventListener('change',e=>{const t=e.target,B=B_();
+  if(t.matches('[data-c]'))B.c[t.dataset.c]=t.checked;
+  else if(t.matches('[data-sel]'))B.v[t.dataset.sel]=t.value;
+  else return;
+  save();render();});
+document.addEventListener('input',e=>{const t=e.target;
+  if(t.matches('[data-v]')){B_().v[t.dataset.v]=t.value;save();render();}
+  else if(t.matches('[data-note]')){B_().note=t.value;save();}});
+render();
+})();
+</script>
+</body>
+</html>
